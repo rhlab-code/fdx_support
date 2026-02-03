@@ -1,0 +1,3 @@
+DEV_API_KEY = "add the Thanos DEV API KEY here"
+PROD_API_KEY = "add the Thanos PROD API KEY here"
+name the file: ".env" with no file extention

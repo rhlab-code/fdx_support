@@ -1,0 +1,141 @@
+/leap/lafe_show_status 0
+hal> /leap/lafe_show_status 0
+LAFE status: Core 0
+FrontEndMode       = 2
+PowerMode          = 1
+LnaMode            = Running
+AdcNormalMode      = 0
+RfAgcRxFixedGain   = 0 (0.00 dB)
+DagcRxFixedGain    = 2 (0.01 dB)
+ExternalRxGain     = 0 (0.00 dB)
+PreAdcRxGain       = 5844 (22.83 dB)
+PostAdcRxGain      = 11 (0.04 dB)
+AdcRxBackoff       = 4481 (17.50 dB)
+RxClipCount        = 0
+Calibration        = 0x0
+RxPgaGainCode      = 0x10a3a
+RxInputPower       = 19.4 dBmV
+hal>
+hal>
+hal> /leap/lafe_show_status 4
+hal> /leap/lafe_show_status 4
+LAFE status: Core 4
+FrontEndMode       = 0
+PowerMode          = 1
+LnaMode            = FixedGain
+AdcNormalMode      = 0
+RfAgcRxFixedGain   = -1024 (-4.00 dB)
+DagcRxFixedGain    = 2 (0.01 dB)
+ExternalRxGain     = 0 (0.00 dB)
+PreAdcRxGain       = -1024 (-4.00 dB)
+PostAdcRxGain      = -3 (-0.01 dB)
+AdcRxBackoff       = 5928 (23.16 dB)
+RxClipCount        = 0
+Calibration        = 0x0
+RxPgaGainCode      = 0x0
+RxInputPower       = 40.6 dBmV
+hal>
+hal>
+hal> /leap/lafe_show_status 5
+hal> /leap/lafe_show_status 5
+LAFE status: Core 5
+FrontEndMode       = 0
+PowerMode          = 1
+LnaMode            = FixedGain
+AdcNormalMode      = 0
+RfAgcRxFixedGain   = -1024 (-4.00 dB)
+DagcRxFixedGain    = 2 (0.01 dB)
+ExternalRxGain     = 0 (0.00 dB)
+PreAdcRxGain       = -1024 (-4.00 dB)
+PostAdcRxGain      = 4 (0.02 dB)
+AdcRxBackoff       = 10808 (42.22 dB)
+RxClipCount        = 0
+Calibration        = 0x0
+RxPgaGainCode      = 0x0
+RxInputPower       = 21.5 dBmV
+hal>
+hal>
+hal> /leap/fafe_show_status 0
+hal> /leap/fafe_show_status 0
+FAFE core-0 status
+====================
+PowerStatus          = 3
+RxEnabled            = 1
+RxFrontEndMode       = 2
+RxAntiAliasFilter    = 2
+RxLnaMode            = Running
+RxLnaBandwidth       = 0.65Hz_wSlew
+AdcRxBackoff         = 4945 (19.32 dB)
+RfAgcRxFixedGain     = 4362 (17.04 dB)
+DagcRxFixedGain      = 2 (0.01 dB)
+ExternalRxGain       = 0 (0.00 dB)
+PreAdcRxGain         = 4441 (17.35 dB)
+PostAdcRxGain        = -707 (-2.76 dB)
+TotalAdcRxGain       = 3734 (14.59 dB)
+MeasuredAdcRxBackoff = 4942 (19.30 dB)
+DiffAdcRxBackoff     = 3 (0.01 dB)
+RxClipCount          = 0
+RxPgaGainCode        = 0x36609 (217.509)
+RxMinPgaGainCode     = 0x0 (0.000)
+RxMaxPgaGainCode     = 0x135 (309.000)
+RxCalStatus          = 0x0
+RxWdata              = 0x1814b44
+RxAgcInterruptULimit = 4224 (16.50 dB)
+RxAgcInterruptLLimit = 5788 (22.61 dB)
+RxInputPower         = 24.2 dBmV
+NcEnabled            = 1
+NcFrontEndMode       = 2
+NcAntiAliasFilter    = 2
+NcLnaMode            = Running
+NcLnaBandwidth       = 0.65Hz_wSlew
+AdcNcBackoff         = 4634 (18.10 dB)
+RfAgcNcFixedGain     = 2467 (9.64 dB)
+DagcNcFixedGain      = 2 (0.01 dB)
+ExternalNcGain       = 0 (0.00 dB)
+PreAdcNcGain         = 2492 (9.73 dB)
+PostAdcNcGain        = -706 (-2.76 dB)
+TotalAdcNcGain       = 1786 (6.98 dB)
+MeasuredAdcNcBackoff = 4632 (18.09 dB)
+DiffAdcNcBackoff     = 2 (0.01 dB)
+NcClipCount          = 0
+NcPgaGainCode        = 0x14a5f (82.593)
+NcMinPgaGainCode     = 0x0 (0.000)
+NcMaxPgaGainCode     = 0x135 (309.000)
+NcCalStatus          = 0x0
+NcWdata              = 0x1fb5db1
+NcAgcInterruptULimit = 4224 (16.50 dB)
+NcAgcInterruptLLimit = 5061 (19.77 dB)
+NcInputPower         = 33.0 dBmV
+hal>
+hal>
+hal> /leap/fafe_show_status 4
+hal> /leap/fafe_show_status 4
+FAFE core-4 status
+====================
+PowerStatus          = 3
+NcEnabled            = 1
+NcFrontEndMode       = 2
+NcAntiAliasFilter    = 0
+NcLnaMode            = Running
+NcLnaBandwidth       = 1322Hz
+AdcNcBackoff         = 4992 (19.50 dB)
+RfAgcNcFixedGain     = 7220 (28.20 dB)
+DagcNcFixedGain      = 2 (0.01 dB)
+ExternalNcGain       = 0 (0.00 dB)
+PreAdcNcGain         = 2377 (9.29 dB)
+PostAdcNcGain        = -705 (-2.75 dB)
+TotalAdcNcGain       = 1672 (6.53 dB)
+MeasuredAdcNcBackoff = 4994 (19.51 dB)
+DiffAdcNcBackoff     = -2 (-0.01 dB)
+NcClipCount          = 0
+NcPgaGainCode        = 0x27998 (158.398)
+NcMinPgaGainCode     = 0x0 (0.000)
+NcMaxPgaGainCode     = 0x0 (0.000)
+NcCalStatus          = 0x0
+NcWdata              = 0x0
+NcAgcInterruptULimit = 0 (0.00 dB)
+NcAgcInterruptLLimit = 0 (0.00 dB)
+NcInputPower         = 32.0 dBmV
+hal>
+hal>
+hal>

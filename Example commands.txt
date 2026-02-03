@@ -1,0 +1,8 @@
+#Install pip dependancies
+pip install pandas paramiko scp scipy config_manager dotenv webbrowser
+
+#Test WBFFT connectivity
+python ds.py --image CC --ip '2001:0558:6043:003F:6978:0A21:4D71:229B'
+
+#Test EC connectivity
+python ec.py --image CC --ip '2001:0558:6043:003F:6978:0A21:4D71:229B'

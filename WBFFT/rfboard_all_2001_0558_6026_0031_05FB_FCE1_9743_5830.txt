@@ -1,0 +1,45 @@
+showModuleInfo
+[00;37;40m ********** FDX AMPLIFIER ***********
+[00;37;40m Manufacturer:                 CommScope
+[00;37;40m Model:                        FDX-LE-XX-XFX
+[00;37;40m Serial Number:                F25TJ020R1216240
+[00;37;40m Date of Production:           Jul 19, 2025
+[00;37;40m Time in Service:              146 days, 17 hours, 29 minutes, 59 seconds
+[00;37;40m ********** SOC Board Info **********
+[00;37;40m Model:                        FDX-SOC-MOD
+[00;37;40m Serial Number:                G25TJ020K1605796
+[00;37;40m Date of Production:           Jul 18, 2025
+[00;37;40m Firmware Version:             0.16.10
+[00;37;40m SOC Board Revision:           00.06
+[00;37;40m Current Temperature:          11.00 c
+[00;37;40m Highest Temperature:          44.12 c
+[00;37;40m North AFE Atten:               0.00 dB
+[00;37;40m FDX Ref Atten:                 0.00 dB
+[00;37;40m FDX Ref Eq:                    0.00 dB
+[00;37;40m Cm Atten:                      0.00 dB
+[00;37;40m ********** RF Board Info **********
+[00;37;40m Model:                        FDX-LE-XX-XEX
+[00;37;40m Serial Number:                F25TJ020R1206100
+[00;37;40m Date of Production:           Jul 19, 2025
+[00;37;40m RF Board Revision:            00.05
+[00;37;40m Current Temperature:          11.88 c
+[00;37;40m Highest Temperature:          50.37 c
+[00;37;40m Legacy US Input Atten Port2:   8.00 dB
+[00;37;40m DS Output Atten Port2:         0.00 dB
+[00;37;40m US FDX Atten:                  6.00 dB
+[00;37;40m US FDX Eq:                     4.00 dB
+[00;37;40m DS Output Atten:              12.00 dB
+[00;37;40m DS Output Eq:                  8.00 dB
+[00;37;40m ********** Power Supply Info **********
+[00;37;40m Power Supply Model:           PS-FDX-RF-AMP
+[00;37;40m Serial Number:                D25GEPS0B0968351
+[00;37;40m Date of Production:           Apr 9, 2025
+[00;37;40m Firmware Version:             01.00
+[00;37;40m Power Supply Revision:        B
+[00;37;40m
+FDX-AMP(rfboard)>$
+FDX-AMP(rfboard)>$ setNorthPortSwitch Downstream
+Path selection to sample at amplifier North side is Downstream
+[00;37;40m
+FDX-AMP(rfboard)>$
+FDX-AMP(rfboard)>$

@@ -1,0 +1,16 @@
+showModuleInfo
+Device Type:                        LE
+Firmware Version:                   1.1.16
+SOC Board Revision:                 00.06
+Serial Number:                      K25TJ020L2905195
+Legacy US Input Atten Port2:        8.00
+DS Output Atten Port2:              0.00
+US FDX Atten:                       10.50
+US FDX Eq:                          4.00
+DS Output Atten:                    11.00
+DS Output Eq:                       8.00
+FDX-AMP(rf-components)>$
+FDX-AMP(rf-components)>$ north-port-switch-path ds
+north-port-switch-path set from ds to ds
+FDX-AMP(rf-components)>$
+FDX-AMP(rf-components)>$
