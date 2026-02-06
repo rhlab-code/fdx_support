@@ -14,8 +14,9 @@ import ipaddress
 import sys
 import os
 import logging
+import macaddress
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- Load environment variables from .env file ---
 try:
@@ -43,14 +44,14 @@ def run_script_and_get_result(script_path, arguments=[]):
         if process.returncode == 0:
             return process.stdout.strip()
         else:
-            print(f"[{os.path.basename(script_path)}] rc={process.returncode}")
+            logging.debug(f"[{os.path.basename(script_path)}] rc={process.returncode}")
             if process.stderr:
-                print(f"[stderr]: {process.stderr.strip()[:500]}")
+                logging.debug(f"[stderr]: {process.stderr.strip()[:500]}")
             if process.stdout:
-                print(f"[stdout]: {process.stdout.strip()[:500]}")
+                logging.debug(f"[stdout]: {process.stdout.strip()[:500]}")
             return None
     except FileNotFoundError:
-        print(f"Script not found: {script_path}")
+        logging.warning(f"Script not found: {script_path}")
         return None
 
 
@@ -79,6 +80,7 @@ def is_ipv6(address):
         ipaddress.IPv6Address(address)
         return True
     except (ipaddress.AddressValueError, ValueError, TypeError):
+        logging.debug("Invalid IPv6 address format.")
         return False
 
 
@@ -91,8 +93,20 @@ def is_ipv4(address):
         ipaddress.IPv4Address(address)
         return True
     except (ipaddress.AddressValueError, ValueError, TypeError):
+        logging.debug("Invalid IPv4 address format.")
         return False
 
+def is_mac(mac):
+    logging.debug(f"Validating MAC address: {mac}")
+    """
+    Checks if a string is a valid MAC address using the macaddress library.
+    """
+    try:
+        macaddress.MAC(mac)
+        return True
+    except ValueError:
+        logging.debug("Invalid MAC address format.")
+        return False
 
 def safe_json_load(s):
     logging.debug("Parsing JSON response")
@@ -104,6 +118,7 @@ def safe_json_load(s):
 
 
 def find_IpAddr(json_string, search):
+    logging.debug(f"Finding address for key: {search}")
     """
     Finds and extracts a given key from each 'metric' result in the Thanos JSON response.
 
@@ -114,6 +129,8 @@ def find_IpAddr(json_string, search):
     Returns:
       First matching value as string, or None.
     """
+    logging.debug("Loading JSON string for address extraction")
+    logging.debug(f"--- {search} ----")
     obj = safe_json_load(json_string)
     if not obj:
         if json_string:
@@ -121,12 +138,19 @@ def find_IpAddr(json_string, search):
         else:
             logging.debug("Empty response from thanos2.py")
         return None
-
     try:
         for result_item in obj.get('data', {}).get('result', []):
             logging.debug(f"Inspecting result item: {result_item}")
             val = result_item.get('metric', {}).get(search)
-            if val:
+            if val: #we have a value
+                # need to determine what we're searching for, MAC or IP?
+                # if (is_ipv4(val) or is_ipv6(val)):
+                    # return mac address
+                    # ret = result_item.get('metric', {}).get('cmMacAddr')
+                    # logging.debug(f"Searching result for MAC address, found: {ret}")
+                    # return ret
+            # else:
+                logging.debug(f"Found value: {val} for key: {search}")
                 return val
     except Exception as e:
         logging.warning(f"Error parsing JSON structure: {e}")
@@ -140,13 +164,14 @@ if __name__ == '__main__':
     if Short_output:
         arg1 = sys.argv[1]   # 'PROD' or 'DEV'
         arg2 = sys.argv[2]   # 'CM' or 'CPE'
-        arg3 = sys.argv[3]   # CM MAC or list string
+        arg3 = sys.argv[3]   # CM MAC or IP
     else:
-        print("Please provide 3 arguments: PROD or DEV, CM or CPE, MACs")
+        print("Please at least provide 3 arguments: <PROD or DEV>, <CM or CPE>, <MAC or IP>")
         arg1 = 'PROD'
         arg2 = 'CPE'
-        arg3 = ['aa:76:3f:f0:78:b0','8c:76:3f:f0:78:c4','10:e1:77:58:d1:78']
-        #arg3 = '24:a1:86:1b:ed:e4'
+        arg3 = '24:a1:86:1b:ed:e4'
+    # Optional 4th argument: ipv6, need to pull mac
+    
 #2001:0558:40A0:0013:DD18:FF03:710D:6047    CM Do not use
 #2001:0558:6043:003F:2855:D2DC:2D77:FD23    CPE MACs for testing
     if arg1 == "PROD":
@@ -176,11 +201,18 @@ if __name__ == '__main__':
         k_matrix = 'K_CmRegStatus_Config'
         find_ipv4 = 'ipV4Addr'
         find_ipv6 = 'ipv6Addr'
+        find_mac = 'cmMacAddr'
     elif arg2 == "CPE":
         #2001:0558:6043:003F:2855:D2DC:2D77:FD23        cpeIpv6Addr
         k_matrix = 'K_CmCpeList'
         find_ipv4 = 'cpeIpv4Addr'
         find_ipv6 = 'cpeIpv6Addr'
+        find_mac = 'cmMacAddr'
+    # elif arg3 and (is_ipv4(arg3) or is_ipv6(arg3)):
+        
+    #     print("Please specify target type as CM or CPE when providing an IP address.")
+    #     sys.exit(1)
+    
     else:
         print(f"Unknown target '{arg2}'. Use CM or CPE.")
         sys.exit(1)
@@ -193,34 +225,47 @@ if __name__ == '__main__':
     run_script(websec, ["thanos-prod", "--url", url, "--id", "ngan-hs", "--secret", secret, "--scope", "ngan:telemetry:thanosapi"])
     token = run_script_and_get_result(websec, [f"thanos-{tag}", "--bearer"]) or ""
 
-    # Build MAC list
-    if isinstance(arg3, str):
-        logging.debug("Single MAC address provided")
-        mac_list = [arg3]
-    else:
-        mac_list = arg3
 
-    for mac in mac_list:
-        # First attempt: without bearer (for environments where thanos2.py reads cached token)
-        arguments = [f"--{tag}", k_matrix, f"cmMacAddr={mac}"]
-        result = run_script_and_get_result(thanos2, arguments)
-
-        # If no result, try again passing bearer explicitly (if supported)
-        if (not result) and token:
-            arguments_bearer = [f"--{tag}", k_matrix, f"cmMacAddr={mac}", "--bearer", token]
-            result = run_script_and_get_result(thanos2, arguments_bearer)
-
-        if not result:
-            print(f"CM MAC = {mac}: no result from thanos2.py")
-            continue
-
-        ip = find_IpAddr(result, find_ipv4)
-        if is_ipv4(ip) and ip != '0.0.0.0':
-            print(ip if Short_output else f"CM MAC = {mac}, {find_ipv4} = {ip}")
-            continue
-
-        ip = find_IpAddr(result, find_ipv6)
-        if is_ipv6(ip):
-            print(ip if Short_output else f"CM MAC = {mac}, {find_ipv6} = {ip}")
+    if (is_ipv4(arg3) or is_ipv6(arg3)):
+        logging.debug(f"Input argument is IP address: {arg3}. Need to find the MAC")
+        if is_ipv4(arg3):
+            logging.debug("Searching by IPv4 address")
+            arguments = [f"--{tag}", k_matrix, f"{find_ipv4}={arg3}"]
+        elif is_ipv6(arg3):
+            logging.debug("Searching by IPv6 address")
+            arguments = [f"--{tag}", k_matrix, f"{find_ipv6}={arg3}"]
         else:
-            print(f"CM MAC = {mac}: No valid {find_ipv4}/{find_ipv6} found.")
+            logging.error("Invalid IP address provided.")
+            sys.exit(1)
+    elif is_mac(arg3):
+        # mac = arg3
+        logging.debug(f"Input argument is MAC address: {arg3}")
+        arguments = [f"--{tag}", k_matrix, f"{find_mac}={arg3}"]
+
+    logging.debug(f"------------ {arguments}  --------------------")
+    result = run_script_and_get_result(thanos2, arguments)
+        
+    # If no result, try again passing bearer explicitly (if supported)
+    if (not result) and token:
+        logging.debug("No result from thanos2.py, retrying with --bearer token")
+        # arguments_bearer = [f"--{tag}", k_matrix, f"cmMacAddr={arg3}", "--bearer", token]
+        # result = run_script_and_get_result(thanos2, arguments_bearer)
+
+    if not result:
+        print(f"CM MAC = {arg3}: no result from thanos2.py")
+        # continue
+
+    ## Process the reslt and pull the right key:value
+    if is_ipv4(arg3): #we're passing an ipv4 looking for mac
+        mac = find_IpAddr(result, find_mac)
+        #print(f"Functionality not yet implemented for IPv4 to MAC lookup.")
+        print(mac if Short_output else f"IPv4 = {arg3}, {find_mac} = {mac}")
+    elif is_ipv6(arg3):# passing ipv6 looking for mac
+        mac = find_IpAddr(result, find_mac)
+        print(mac if Short_output else f"IPv6 = {arg3}, {find_mac} = {mac}")
+    elif is_mac(arg3): # passing mac looking for ipv6
+        ip = find_IpAddr(result, find_ipv6)
+        print(ip if Short_output else f"IPv6 = {arg3}, {find_ipv6} = {ip}")
+    else:
+        print(f"CM MAC = {arg3}: No valid {find_ipv4}/{find_ipv6} found.")
+        

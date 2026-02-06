@@ -36,6 +36,8 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 import logging
+
+
 # New unified library imports
 import amp_config_manager
 import amp_library
@@ -56,7 +58,7 @@ parser.add_argument('--domain', type=str, help="Optional. CM domain for IP looku
 # --- New argument for cancellation depth ---
 parser.add_argument('--show-cancellation-depth', action='store_true', default=False,
                     help="Include Cancellation Depth in plots and CSVs (default: not shown).")
-
+parser.add_argument('--path_date', type=str, help="Optional. Date string for output path.")
 args = parser.parse_args()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -82,68 +84,68 @@ except (ImportError, AttributeError) as e:
 # print(f"Running with {args.image} image configuration...")
 
 def run_script_and_get_result(script_path, arguments=[]):
+  logging.debug("run_script_and_get_result called.")
+  logging.debug(f"Running script: {script_path} with arguments: {arguments}")
   """Runs a Python script in a subprocess and returns the output."""
   try:
     command = ["python", script_path] + arguments
     process = subprocess.run(command, capture_output=True, text=True, check=True)
+    logging.debug(f"Script output: {process.stdout.strip()}")
     return process.stdout.strip()
   except (subprocess.CalledProcessError, FileNotFoundError) as e:
-    # print(f"Error running script {script_path}: {e}")
+    logging.debug(f"Error running script {script_path}: {e}")
     return None
 
-def is_ipv6(address):
-  """Checks if a string is a valid IPv6 address."""
-  try:
-    ipaddress.IPv6Address(address)
-    return True
-  except ipaddress.AddressValueError:
-    return False
 
-def is_ipv4(address):
-  """Checks if a string is a valid IPv4 address."""
-  try:
-    ipaddress.IPv4Address(address)
-    return True
-  except ipaddress.AddressValueError:
-    return False
-def is_mac(mac):
+def sanitize_mac(mac_address):
     """
-    Checks if a string is a valid MAC address using the macaddress library.
+    Sanitizes a MAC address string by removing separators 
+    and converting to uppercase.
     """
-    try:
-        macaddress.MAC(mac)
-        return True
-    except ValueError:
-        return False
+    # Remove common separators: ':', '-', and '.'
+    temp = mac_address.replace(":", "").replace("-", "").replace(".", "")
+    # Convert to uppercase to ensure consistency
+    sanitized = temp.upper()
+    
+    # Optional: Basic validation to check length (a valid MAC has 12 hex digits)
+    if len(sanitized) == 12:
+        return sanitized
+    else:
+        raise ValueError(f"Invalid MAC address length after sanitization: {mac_address}")
+
+
 def scp_get_with_retry(scp_client, remote_path, local_path, retries=3, delay=3):
+    logging.debug("scp_get_with_retry called.")
     """Attempts to download a file using SCP, with a retry mechanism."""
     for attempt in range(retries):
         try:
-            # print(f"Attempting to download '{remote_path}' (Attempt {attempt + 1}/{retries})...")
+            logging.debug(f"Attempting to download '{remote_path}' (Attempt {attempt + 1}/{retries})...")
             scp_client.get(remote_path, local_path)
             # print(f"Successfully downloaded '{remote_path}' to '{local_path}'.")
             return True
         except SCPException as e:
-            # print(f"SCP Error on attempt {attempt + 1}: {e}. File may not exist on remote.")
+            logging.debug(f"SCP Error on attempt {attempt + 1}: {e}. File may not exist on remote.")
             if "No such file or directory" in str(e):
                 # print(str(e))
                 return False
             if attempt < retries - 1:
-                # print(f"Waiting {delay} seconds before retrying...")
+                logging.debug(f"Waiting {delay} seconds before retrying...")
                 time.sleep(delay)
             else:
-                print(f"Failed to download '{remote_path}' after {retries} attempts.")
+                logging.debug(f"Failed to download '{remote_path}' after {retries} attempts.")
         except Exception as e:
-            # print(f"An unexpected error occurred during SCP download on attempt {attempt + 1}: {e}")
+            logging.debug(f"An unexpected error occurred during SCP download on attempt {attempt + 1}: {e}")
             if attempt < retries - 1:
                 # print(f"Waiting {delay} seconds before retrying...")
                 time.sleep(delay)
             else:
-                print(f"Failed to download '{remote_path}' due to an unexpected error.")
+                logging.debug(f"Failed to download '{remote_path}' due to an unexpected error.")
 
     return False
 
 def save_trace_to_csv(filepath, headers, x_data, y_data, run_single):
+    logging.debug("save_trace_to_csv called.")
+    logging.debug(f"Saving trace to CSV at '{filepath}' with headers {headers}. Run single: {run_single}")
     """Saves trace data to a CSV file.
     In single-run mode, it creates a new file.
     In continuous mode, it appends the new y_data as a new column.
@@ -196,7 +198,7 @@ def save_trace_to_csv(filepath, headers, x_data, y_data, run_single):
 target_cm_mac = config['target_ecm_mac']
 target_hostname = config['target_hostname']
 cm_domain = config['cm_domain']
-path = config['path']
+path = config['path']+"/"+sanitize_mac(args.mac)+"/"+args.path_date+"/ec"
 run_single = config['run_single']
 lstatType = list(config['statType']) # Make a mutable copy
 lsubBandId = config['subBandId']
@@ -205,36 +207,11 @@ lsubBandId = config['subBandId']
 if args.mac:
     target_cm_mac = args.mac
     # print(f"Using MAC address from command line: {target_cm_mac}")
-    
-if args.addr:
-        if is_ipv4(args.addr) or is_ipv6(args.addr):
-            args.ip = args.addr
-            logging.debug(f"Using IP address from --addr: {args.ip}")
-        elif is_mac(args.addr):
-            target_cm_mac = args.addr
-            logging.debug(f"Using MAC address from --addr: {target_cm_mac}")
-        else:
-            logging.error(f"The provided --addr value '{args.addr}' is neither a valid IP nor a valid MAC address.")
-            sys.exit(1)
-
-if args.domain:
-    cm_domain = args.domain
-    # print(f"Using CM domain from command line: {cm_domain}")
 
 if args.ip:
     target_hostname = args.ip
     # print(f"Using IP address from command line: {target_hostname}")
-elif target_cm_mac:
-    # print(f"Looking up IP for MAC: {target_cm_mac}")
-    script = os.path.join(config['get_ip_path'], config['get_ip_script'])
-    arguments = [cm_domain, "CPE", target_cm_mac]
-    temp = run_script_and_get_result(script, arguments)
-    if temp and (is_ipv4(temp) or is_ipv6(temp)):
-        target_hostname = temp
-        # print(f"Found IP: {target_hostname}")
-    else:
-        print(f"Could not find a valid IP for MAC {target_cm_mac}. Will use hostname from config: {target_hostname}")
-# --- End of Modified Section ---
+
 
 if 2 in lstatType:
     # print("Note: Removing statType 2. Time-domain data will be derived via IFFT.")
@@ -402,15 +379,15 @@ if plot_psd_window:
 
 # --- SSH Connection Logic ---
 if not args.no_jump:
-    # print("--- Starting Data Collection Cycle (via Jump Server) ---")
+    logging.debug("--- Starting Data Collection Cycle (via Jump Server) ---")
     jumpbox_client = paramiko.SSHClient()
     jumpbox_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
         jumpbox_client.connect(config['jumpbox_hostname'], username=config['jumpbox_username'])
     except Exception as e:
-        # print("\a")  # Play beep sound
+        print("\a")  # Play beep sound
         # print("\nJumpbox Connect Failed, make sure you are freshly authenticated!\n")
-        # print(f"Error details: {e}")
+        logging.error(f"Error details: {e}")
         sys.exit(1)
     transport = jumpbox_client.get_transport()
     dest_addr = (target_hostname, 22)

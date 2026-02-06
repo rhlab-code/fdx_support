@@ -10,6 +10,8 @@
 import time
 import re
 import numpy as np
+import logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class AmpControl:
     def complex_to_mag_db(self, real, imag):
@@ -119,8 +121,9 @@ class CommscopeAmp(AmpControl):
             # print(output)
 
 class ComcastAmp(AmpControl):
+    logging.debug("Using ComcastAmp class for amplifier control.")
     """Handles communication with Comcast (RDK) amplifiers."""
-    def hal_comm(self, channel, command, prompt=">", wait_time=10):
+    def hal_comm(self, channel, command, prompt=">", wait_time=12):
         start_time = time.time()
         channel.send('\r\n')
         output = self._get_output(channel)
@@ -129,13 +132,15 @@ class ComcastAmp(AmpControl):
         while True:
             if "hal>" in output:
                 channel.send(f'{command} \r\n')
+                logging.debug(f"Sent HAL command: {command}")
                 full_output = ""
                 while True:
                     time.sleep(0.5)
                     if channel.recv_ready():
+                        logging.debug(f"Receiving output for command '{command}'...")
                         full_output += channel.recv(128000).decode("utf-8")
                     if prompt in full_output:
-                        # print(full_output)
+                        logging.debug(f"Received output for command '{command}': {full_output}")
                         return full_output
                     if time.time() > start_time + wait_time:
                         raise TimeoutError(f"Timeout waiting for prompt '{prompt}' after command '{command}'")

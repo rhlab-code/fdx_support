@@ -67,6 +67,7 @@ parser.add_argument('--mac', type=str, help="Optional. Target device MAC address
 parser.add_argument('--ip', type=str, help="Optional. Target device IP address. Overrides the value in config and any MAC-based IP lookup.")
 parser.add_argument('--addr', type=str, help="Optional. Specify either IP or MAC address of the target device. Overrides the value in config.")
 parser.add_argument('--domain', type=str, help="Optional. CM domain for IP lookup script. Overrides the value in config.")
+parser.add_argument('--path_date', type=str, help="Optional. Date string for output path.")
 
 args = parser.parse_args()
 
@@ -78,7 +79,24 @@ try:
 except ImportError:
     PLOTLY_AVAILABLE = False
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def sanitize_mac(mac_address):
+    """
+    Sanitizes a MAC address string by removing separators 
+    and converting to uppercase.
+    """
+    # Remove common separators: ':', '-', and '.'
+    temp = mac_address.replace(":", "").replace("-", "").replace(".", "")
+    # Convert to uppercase to ensure consistency
+    sanitized = temp.upper()
+    
+    # Optional: Basic validation to check length (a valid MAC has 12 hex digits)
+    if len(sanitized) == 12:
+        return sanitized
+    else:
+        raise ValueError(f"Invalid MAC address length after sanitization: {mac_address}")
+
 
 # --- Helper Functions ---
 def run_script_and_get_result(script_path, arguments=[]):
@@ -95,31 +113,6 @@ def run_script_and_get_result(script_path, arguments=[]):
     # # print(f"Script not found: {script_path}")
     return None
 
-def is_ipv6(address):
-  """Checks if a string is a valid IPv6 address."""
-  try:
-    ipaddress.IPv6Address(address)
-    return True
-  except ipaddress.AddressValueError:
-    return False
-
-def is_ipv4(address):
-  """Checks if a string is a valid IPv4 address."""
-  try:
-    ipaddress.IPv4Address(address)
-    return True
-  except ipaddress.AddressValueError:
-    return False
-
-def is_mac(mac):
-    """
-    Checks if a string is a valid MAC address using the macaddress library.
-    """
-    try:
-        macaddress.MAC(mac)
-        return True
-    except ValueError:
-        return False
 
 def parse_hal_gains(filepath, section_marker, gain_names):
     """Generic function to parse gain values from a HAL status file."""
@@ -341,25 +334,14 @@ def main():
     target_hostname = config['target_hostname']
     target_cm_mac = config['target_ecm_mac']
     cm_domain = config['cm_domain']
-    path = config['result_path']
+    # path = config['path']+"/"+sanitize_mac(args.mac)+"/"+args.path_date+"/wbfft"
+    path = "./out/"+sanitize_mac(args.mac)+"/"+args.path_date+"/wbfft"
     appendix = config['result_filename_appendix']
 
     # Override config with command-line arguments if provided
     if args.mac:
         target_cm_mac = args.mac
-        logging.debug(f"Using MAC address from command line: {target_cm_mac}")
-
-    if args.addr:
-        if is_ipv4(args.addr) or is_ipv6(args.addr):
-            args.ip = args.addr
-            logging.debug(f"Using IP address from --addr: {args.ip}")
-        elif is_mac(args.addr):
-            target_cm_mac = args.addr
-            logging.debug(f"Using MAC address from --addr: {target_cm_mac}")
-        else:
-            logging.error(f"The provided --addr value '{args.addr}' is neither a valid IP nor a valid MAC address.")
-            sys.exit(1)
-
+        # print(f"Using MAC address from command line: {target_cm_mac}")
     if args.domain:
         cm_domain = args.domain
         logging.debug(f"Using CM domain from command line: {cm_domain}")
@@ -370,16 +352,16 @@ def main():
     if args.ip:
         target_hostname = args.ip
         logging.debug(f"Using IP address from command line: {target_hostname}")
-    elif target_cm_mac:
-        logging.debug(f"Looking up IP for MAC: {target_cm_mac}")
-        script = os.path.join(config['get_ip_path'], config['get_ip_script'])
-        arguments = [cm_domain, "CPE", target_cm_mac] # Use the potentially overridden domain
-        temp = run_script_and_get_result(script, arguments)
-        if temp and (is_ipv4(temp) or is_ipv6(temp)):
-            target_hostname = temp
-            logging.debug(f"Found IP: {target_hostname}")
-        else:
-            logging.warning(f"Could not find a valid IP for MAC {target_cm_mac}. Will use hostname from config: {target_hostname}")
+    # elif target_cm_mac:
+    #     logging.debug(f"Looking up IP for MAC: {target_cm_mac}")
+    #     script = os.path.join(config['get_ip_path'], config['get_ip_script'])
+    #     arguments = [cm_domain, "CPE", target_cm_mac] # Use the potentially overridden domain
+    #     temp = run_script_and_get_result(script, arguments)
+    #     if temp and (is_ipv4(temp) or is_ipv6(temp)):
+    #         target_hostname = temp
+    #         logging.debug(f"Found IP: {target_hostname}")
+    #     else:
+    #         logging.warning(f"Could not find a valid IP for MAC {target_cm_mac}. Will use hostname from config: {target_hostname}")
     # --- End of Modified Section ---
 
     s2p_remote_path = config.get('s2p_remote_path', '/run/data/calibration/')
@@ -451,11 +433,15 @@ def main():
             logging.debug(target_hostname)
             jumpbox_channel = transport.open_channel("direct-tcpip", dest_addr, ('', 0))
             target_client = paramiko.SSHClient(); target_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
+            logging.debug("Establishing SSH connection to target via jumpbox...")
             target_client.connect(target_hostname, username=config['target_username'], password=config['target_password'], sock=jumpbox_channel)
+            logging.debug("SSH connection established via jumpbox.")
         else:
             logging.debug("Connecting directly to target device...")
             target_client = paramiko.SSHClient(); target_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            logging.debug("Establishing direct SSH connection to target...")
+            logging.debug(target_hostname)
+            logging.debug(config['target_username'])
             target_client.connect(target_hostname, username=config['target_username'], password=config['target_password'])
 
         channel = target_client.invoke_shell(); channel.settimeout(1000)
@@ -483,15 +469,17 @@ def main():
                 f.write('\n'.join(line.strip() for line in ret.splitlines() if line.strip()))
 
         # --- Stage 2: Run WBFFT captures and gather file list ---
-        logging.debug("--- Stage 2: Running WBFFT captures & building file list ---")
+        logging.info("--- Stage 2: Running WBFFT captures & building file list ---")
         remote_files_to_get = {}
         local_wbfft_paths = {}
 
         for measurement_name in args.measurement:
             m_config = measurement_configs[measurement_name]
             wbfft_config_cmd = f"/wbfft/configuration startFreq {config['startFreq']} endFreq {config['endFreq']} outputFormat {config['outputFormat']} fftSize {config['fftSize']} windowMode {config['windowMode']} averagingMode {config['averagingMode']} samplingRate {config['samplingRate']} adcSelect {m_config['adcSelect']} runDuration {config['runDuration']} triggerCount {config['triggerCount']} aggrPeriod {config['aggrPeriod']}"
+            logging.debug(f"Configuring WBFFT for {measurement_name} with command: {wbfft_config_cmd}")
             amp.hal_comm(channel, wbfft_config_cmd, "Success.")
             remote_wbfft_base = f"/tmp/WBFFT_{measurement_name}"
+            logging.debug(f"Starting WBFFT capture for {measurement_name}...")
             amp.hal_comm(channel, f"/wbfft/start_capture 0 {remote_wbfft_base}", "Success.")
             time.sleep(1)
 
